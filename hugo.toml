@@ -1,3 +1,4 @@
 baseURL = 'https://woaihuangfan.github.io/'
 languageCode = 'en-us'
-title = 'My New Hugo Site'
+title = '清露晨流, 新桐初引'
+theme = 'ananke'
