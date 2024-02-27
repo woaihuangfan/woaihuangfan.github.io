@@ -3,6 +3,8 @@ date = '2024-01-10T11:28:33+08:00'
 draft = false
 title = 'tomcat架构原理解析'
 toc = true
+featured_image = "images/IMG_1890.png"
+omit_header_text = true
 
 +++
 
