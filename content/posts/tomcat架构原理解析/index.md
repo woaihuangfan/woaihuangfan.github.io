@@ -5,22 +5,15 @@ title = 'tomcat架构原理解析'
 toc = true
 featured_image = "images/IMG_1890.png"
 omit_header_text = true
-
+image = "images/IMG_1890.png"
+categories = [
+    "tomcat",
+]
 +++
 
 本文尝试通过由浅入深，由点到面的方式来梳理什么是tomcat, tomcat 的整体架构原理以及我们常用的springboot是如何与tomcat集成的，其中涉及大量的源码解析。希望能给那些对tomcat原理感兴趣的同学提供一些视角和参考。
 
 <!--more-->
-
-[TOC]
-
-
-
-
-
-
-
-
 
 # 什么是Tomcat
 

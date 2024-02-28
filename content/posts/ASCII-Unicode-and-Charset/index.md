@@ -5,7 +5,10 @@ draft = false
 toc=true
 featured_image = "images/image-20240103181022030.png"
 omit_header_text = true
-
+categories = [
+  "冷知识",
+]
+image = "images/birds.png"
 +++
 
 
