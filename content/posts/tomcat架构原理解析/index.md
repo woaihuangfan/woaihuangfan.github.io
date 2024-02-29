@@ -2652,3 +2652,5 @@ private ServletRegistration.Dynamic addServlet(String servletName, String servle
 ```
 
 至此，wrapper 也就创建完成，并在tomcat 启动的时候就会实例化出了Servlet。和前面分析的tomcat 架构完美衔接，至于请求到达DispatcherServlet后怎么分发交给controller，那就是另一个topic了。
+
+> 复习回顾：这里说的wrapper指的是什么？
