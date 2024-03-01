@@ -129,6 +129,7 @@ class TestCompressionServlet : HttpServlet() {
         for (i in 1 until 10000000) {
             stringBuilder.append("Hi,")
         }
+        response.contentType="text/html"
         response.writer.write(stringBuilder.toString())
     }
 }
@@ -143,29 +144,64 @@ class TestCompressionServlet : HttpServlet() {
 1. 在写入CharBuffer 后，如果CharBuffer满了会将CharBuffer 中的数据flush 到ByteBuffer, 然后清空CharBuffer，源码位置：`org.apache.catalina.connector.OutputBuffer#write`
 
 2. 剩下的数据继续写入CharBuffer, 重复1的步骤
+
 3. 如果在#1中，ByteBuffer也满了，会flush 数据到`org.apache.coyote.Response`中并清空ByteBuffer，调用它的write方法， 最终会调用到`Http11OutputBuffer`的doWrite方法。源码位置：`org.apache.coyote.http11.Http11OutputBuffer#doWrite`
    * 这时候Http11OutputBuffer如果发现Response 还没commit, 会通过action调用`Http11Processor` 来commit response，这一步会准备响应的响应行(包括协议和状态码，例如：HTTP/1.1 200）以及响应头, 然后将这部分信息写到Http11OutputBuffer的headerBuffer中，
    * headerBuffer的大小可进行配置，若超出大小则抛BufferOverflowException。
    * 然后通过outputBuffer.commit()将这部分数据存到socketBufferHandler的writeBuffer中，如果writeBuffer也满了则会写到socket中。
+
 4. 在3#中准备响应头的时候(源码位置：`org.apache.coyote.http11.Http11Processor#prepareResponse`)，如果开启了压缩功能：
    * 添加`Vary: accept-encoding` header。
    * 根据Request中accept-encoding这个header传过来的值判断客户端是否支持`gzip`，若支持则设置contentLength为-1， 若不支持那就不压缩。也就是说tomcat 默认只支持gzip压缩
    * 如果contentLength不为-1，则添加`ChunkedOutputFilter`为activeFilters
    * 如果发现支持gzip, 则会添加`GzipOutputFilter`为activeFilters
 
-5. 然后继续回到3#中Http11OutputBuffer的doWrite 方法，在commit response 之后会调用GzipOutputFilter的doWrite方法，然后调用GZIPOutputStream的doWrite方法，GZIPOutputStream会将消息先读取到内存中。源码位置：`org.apache.coyote.http11.filters.GzipOutputFilter#doWrite` 及`java.util.zip.Deflater#deflate(byte[], int, int, int)`
-6. 继续1#，2#，5#，直到所有的响应体数据全部读取到内存中。
-7. 经过前面几步后这个长响应体大部分都已经被传输到客户端，还有一小部分可能存在CharBuffer和ByteBuffer中，servlet 的service 方法也会执行结束，来到Adapter的`response.finishResponse()` 阶段，源码位置：`org.apache.catalina.connector.Response#finishResponse`
+5. 然后继续回到3#中Http11OutputBuffer的doWrite 方法，在commit response 之后会调用GzipOutputFilter的doWrite方法, 接着6#。
+
+6. GZIPOutputStream的doWrite方法会通过调用native 方法来将数据读取到内存中，然后进行压缩并存到GZIPOutputStream内部的byte数组buf中。
+
+   * 压缩的逻辑由JDK封装的`java.util.zip.Deflater` 来调用native实现
+   * 但是此处不会一有数据就马上进行压缩(NO_FLUSH 模式)，而是数据累计到一定量之后才进行压缩, 具体多少数据量才压缩由Deflater决定.
+
+7. 如果压缩后的数据一个buf 装不下, 就将buf 传给ChunkedOutputFilter(第7#），继续往buf里填充数据。
+
+   * 当所有现阶段已压缩的数据都交给ChunkedOutputFilter后，`GzipOutputFilter#doWrite`方法才算结束
+
+     ```java
+     public void write(byte[] b, int off, int len) throws IOException {
+         ...
+         if (!def.finished()) {
+             def.setInput(b, off, len);
+             while (!def.needsInput()) {
+                 deflate();
+             }
+         }
+     }
+     ```
+
+   源码位置：`org.apache.coyote.http11.filters.GzipOutputFilter#doWrite` 及`java.util.zip.Deflater#deflate(byte[], int, int, int)`
+
+8. 将到buf中的byte传给ChunkedOutputFilter，调用ChunkedOutputFilter的doWrite方法。ChunkedOutputFilter会构造需要分开传输的块，然后将块写入到socketBufferHandler的writeBuffer中。如果writeBuffer也满了则会写到socket中，开始分块传输。
+
+9. 继续1#，2#，5#，6#, 7#直到servlet write结束。
+
+10. 经过前面几步后这个长响应体大部分都已经被传输到客户端，还有一小部分可能存在CharBuffer和ByteBuffer中，servlet 的service 方法也会执行结束，来到Adapter的`response.finishResponse()` 阶段，源码位置：`org.apache.catalina.connector.Response#finishResponse`
    * 如果CharBuffer中有数据则flush到ByteBuffer，如果ByteBuffer满了则继续3#，5#。
-   * 调用doFlush方法，再次flush CharBuffer 和flush ByteBuffer
-   * 通过Close Action调用Http11Processor的finishResponse方法，然后调用到GzipOutputFilter的end方法，标记flush为true
-   *  然后调用native 方法进行gzip 压缩，每次压缩的数据长度为GZIPOutputStream内部的byte数组buf长度（默认512), 压缩完后并存储在buf中
-     * 如果buf满载的情况下，块中第一行标明数据长度会是512，用十六进制200表示。源码位置：
-   * 每次压缩完后将压缩后byte传给ChunkedOutputFilter，调用ChunkedOutputFilter的doWrite方法。ChunkedOutputFilter会构造需要分开传输的块，然后将块写入到socketBufferHandler的writeBuffer中。如果writeBuffer也满了则会写到socket中，开始分块传输。
-   * 继续压缩剩余数据，直到内存中所有响应数据压缩完成，标记finished 为true
-   * 按照GZIP 算法要求构造数据尾部，并继续传递给ChunkedOutputFilter，至此全部的压缩数据都已处理完成
+   * 调用doFlush方法，再次flush CharBuffer 和flush ByteBuffer。
+   * 通过Close Action调用Http11Processor的finishResponse方法，然后调用到GzipOutputFilter的end方法，标记finish为true。
+   *  采用FINISH模式继续压缩，此时会把剩下数据继续压缩(因为有可能内存中累计的数据量还没到deflater的标准），压缩后的数据依旧存到buf中并继续第7#，8#步。源码位置：`java.util.zip.GZIPOutputStream#finish`
+     * 直到内存中所有响应数据压缩并写到buf完成，标记finished 为true。
+     * 如果buf满载的情况下，块中第一行标明数据长度会是512，用十六进制200表示。
+   * 最后按照GZIP 算法要求构造数据尾部，并继续传递给ChunkedOutputFilter，至此全部的压缩数据都已处理完成
 
 ![tomcat压缩与分块传输数据流向](images/tomcat压缩与分块传输数据流向.png)
 
 
 
+上述servlet开启压缩前，浏览器中显示响应大小约为30MB,
+
+![image-20240301184203095](images/image-20240301184203095.png)
+
+开启压缩后传输体积减少了1000倍！
+
+![image-20240301184051702](images/image-20240301184051702.png)
