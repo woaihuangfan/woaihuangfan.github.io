@@ -1,5 +1,5 @@
 +++
-title = 'tomcat chunk response and compresssion'
+title = 'tomcat http 压缩与分块传输'
 date = 2024-02-29T13:38:34+08:00
 draft = false
 image = "images/IMG_0942.png"
