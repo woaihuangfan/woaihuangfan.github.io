@@ -168,6 +168,42 @@ socket.getOutputStream().write(
 
 将以上步骤再串起来我们就可以自己去实现tomcat， 注意，真正的tomcat实现和功能要比这个复杂的多，但理解这部分内容对于我们理解什么是Tomcat很重要。
 
+**测试先行**
+
+```kotlin
+@Test
+fun `should successfully process valid HTTP request`() {
+    // Given
+    MyHttpServer(TEST_PORT).start()
+
+    // When
+    // 发起HTTP 请求
+    val socket = sendRequest()
+
+    // Then
+    assertEquals(
+        "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n" + "Content-Length: 25\r\n\r\nHello, World and /sample!",
+        decodeResponse(socket)
+    )
+
+}
+
+/**
+ * 1.建立socket连接
+ * 2.向socket中写入符合HTTP规范的数据
+ * 3.返回socket
+ */
+private fun sendRequest(
+    httpRequest: String = "GET /sample HTTP/1.1\r\n" + "Host: localhost\r\n" + "Accept: application/json\r\n\r\n"
+): Socket {
+    val socket = Socket(Constants.LOCAL_HOST, Constants.TEST_PORT)
+    socket.getOutputStream().write(httpRequest.toByteArray(Charset.defaultCharset()))
+    return socket
+}
+```
+
+
+
 **MyHttpServer类** 
 
 * 负责创建ServerSocket监听端口
