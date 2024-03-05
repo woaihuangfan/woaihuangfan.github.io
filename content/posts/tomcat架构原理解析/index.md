@@ -11,13 +11,28 @@ categories = [
 ]
 +++
 
-本文尝试通过由浅入深，由点到面的方式来梳理什么是tomcat, tomcat 的整体架构原理以及我们常用的springboot是如何与tomcat集成的，其中涉及大量的源码解析。希望能给那些对tomcat原理感兴趣的同学提供一些视角和参考。
+
+
+Tomcat自1998年问世以来因为其高性能，免费等特点广受Java爱好者的喜爱，但在Springboot等微服务框架成为技术主流后的今天，tomcat似乎逐渐"消失"在大众的视线中，你还在用tomcat吗？我相信对于大部分java web developer来说这个问题的答案是Yes, 因为Springboot web starter默认集成的就是tomcat。
+
+本文尝试从"为什么浏览器发出的HTTP请求可以到达我们的Controller"这一基本问题出发，由浅入深，由点到面的方式先从整体的角度来梳理tomcat的架构原理，再到以一个HTTP/1.1 请求为例来分析tomcat作为一个HTTP web服务器和Servlet容器它是怎么实现的，最后回归这个问题梳理springboot是如何与tomcat集成的。其中涉及大量的源码解析，请留意涉及源码解析的部分都是基于**tomcat 10.x** 来进行。希望能给那些对tomcat原理感兴趣的同学提供一些视角和参考。
 
 <!--more-->
 
 # 什么是Tomcat
 
-**总的来说tomcat是一个web服务器和servlet容器**， 但`web服务器` 和`servlet容器`依旧显的有些抽象，他们到底是什么？
+## Tomcat的核心功能
+
+**tomcat是一个==web应用服务器==和==Servlet容器==，它还是 Jakarta Servlet、Jakarta Server Pages、Jakarta Expression Language、Jakarta WebSocket、Jakarta Annotations 和 Jakarta Authentication 规范的开源实现**。
+
+这里有两个重点，web应用服务器和Servlet容器。分别对应了它的两个核心功能：
+
+> 什么是Web服务器, 说白了，它的作用就是将主机上的某个资源映射成一个URL供外界访问。
+
+- 处理 `Socket` 连接，负责网络字节流与 `Request` 和 `Response` 对象的转化。
+- 加载并管理 `Servlet` ，并将请求交给Servlet处理。
+
+但`web服务器` 和`servlet容器`依旧显的有些抽象，他们到底是什么？
 
 
 
@@ -42,19 +57,17 @@ And include the appropriate HTTP headers in the response (e.g., Content-Type)
 
 
 
-## 手写最简版Tomcat
+## 理解HTTP 请求的本质
 
-在动手之前我们需要先复习一下基础知识。
-
-### 理解HTTP 请求的本质
-
-HTTP请求是指符合HTTP协议规范的数据，下面给出一个完整的GET 请求示例
+HTTP请求是客户端在向服务端请求某个资源时，向服务端发送的是符合HTTP协议规范的数据，下面给出一个完整的GET 请求示例
 
 ```http
 GET /sample HTTP/1.1 
 Host: www.example.com
 Accept: application/json
 ```
+
+## 手写最简版**Tomcat**
 
 ### 如何发起HTTP请求？
 
@@ -64,7 +77,7 @@ Accept: application/json
 
 假设有一个主机A，有一个主机B，A需要通过浏览器发送HTTP请求给B的Java 进程。那么经历如下步骤：
 
-1.HTTP 是应用层协议，在发送数据之前，A中的浏览器需要和B中的Java 进程建立一个TCP 链接。
+1.**HTTP 是应用层协议，在发送数据之前，A中的浏览器需要和B中的Java 进程建立一个TCP 链接。**
 
 那我们如何建立TCP 链接呢，其实这部分工作是由应用层的底层库去帮我们来做的。以Java 为例，这个类库就叫做Socket。它也是在网络通信中的一个种抽象概念，从Java的角度来理解建立一个TCP 链接其实就是生成了一个Socket 对象，下面是一个建立TCP链接示例：
 
@@ -75,7 +88,7 @@ Accept: application/json
 
 当上述代码输出`true` 就表明已经建立了链接，这底层由JDK 调用操作系统API 来实现。
 
-2.链接建立后，我们就可以流式的传输数据，发起HTTP请求其实就是向一个地方去写数据。
+2.**链接建立后，我们就可以流式的传输数据，发起HTTP请求其实就是向一个地方去写符合HTTP规范数据**。
 
 向哪里写？依旧以Java 为例，上面说到在网络中的通信我们有个抽象的东西叫Socket, 而JDK 类库帮我们做了底层实现，因此我们写数据读数据还是面向Socket。下面是向socket 数据的示例：
 
@@ -88,7 +101,7 @@ socket.getOutputStream().write(71)
 
 > 这里的byte,71根据字符编码可以解析成对应的字符，71通常对应的是字母G,  关于字符编码请参考我的另一篇笔记：[ASCII、Unicode和UTF-8与字符编码](https://woaihuangfan.github.io/posts/ascii-unicode-and-charset/)
 
-3.我们向Socket写入数据后，剩下的也会由操作系统帮我们处理，通过互联网传输到主机B上。
+3.**我们向Socket写入数据后，剩下的也会由jvm和操作系统帮我们处理，通过通信网络传输到主机B上**。
 
 至此，我们已经知道了客户端发起一个HTTP请求的时候干了什么，不同的应用程序底层对于Socket可能有不同实现, 但这部分底层细节其实往往不用我们操心，我们只需要知道发起HTTP请求就是发送了一段符合HTTP协议规范的数据到服务端。关于更多HTTP 协议的内容请参阅相关文档。
 
@@ -164,9 +177,9 @@ socket.getOutputStream().write(
 
 ==**处理 `Socket` 连接，负责网络字节流与 `Request` 和 `Response` 对象的转化**==。
 
-#### 最简"Tomcat"
+#### 最简版**Tomcat**
 
-将以上步骤再串起来我们就可以自己去实现tomcat， 注意，真正的tomcat实现和功能要比这个复杂的多，但理解这部分内容对于我们理解什么是Tomcat很重要。
+将以上步骤再串起来我们就可以自己去实现tomcat， 注意，真正的tomcat实现和功能要比这个复杂的多，但理解这部分内容对于我们理解什么是Tomcat很重要，因为**tomcat在坐着类似的事情**。
 
 **测试先行**
 
@@ -202,9 +215,7 @@ private fun sendRequest(
 }
 ```
 
-
-
-**MyHttpServer类** 
+**SampleHttpServer类** 
 
 * 负责创建ServerSocket监听端口
 * 接收客户端的请求，从Socket 中读取数据解析成Request对象
@@ -219,7 +230,7 @@ import java.net.SocketException
 import java.nio.charset.StandardCharsets
 
 
-class MyHttpServer(private val port: Int) {
+class SampleHttpServer(private val port: Int) {
 
     private lateinit var serverSocket: ServerSocket
 
@@ -366,18 +377,9 @@ data class Response(
 
 > 源码地址: https://github.com/woaihuangfan/how-tomcat-works.git
 
+这是采用大部分人较为熟悉BIO的的实现方式，而从tomcat 8.0开始会默认使用NIO的方式来处理请求，关于NIO的demo请在源码中寻找`NioHttpServer`。
 
 
-## Tomcat的核心功能
-
-**tomcat是一个==web应用服务器==和==Servlet容器==，它还是 Jakarta Servlet、Jakarta Server Pages、Jakarta Expression Language、Jakarta WebSocket、Jakarta Annotations 和 Jakarta Authentication 规范的开源实现**。
-
-这里有两个重点，web应用服务器和Servlet容器。分别对应了它的两个核心功能：
-
-> 什么是Web服务器, 说白了，它的作用就是将主机上的某个资源映射成一个URL供外界访问。
-
-- 处理 `Socket` 连接，负责网络字节流与 `Request` 和 `Response` 对象的转化。
-- 加载并管理 `Servlet` ，并将请求交给Servlet处理。
 
 ## 什么是Servlet 
 
@@ -391,7 +393,7 @@ web开发，我们其实主要处理三件事：
 
 #1中读取到数据后，需要交给一个东西(对象)让2#来处理请求，这个东西处理完请求后还要生成响应交给#3， 我们把这个东西(对象) 叫**Servlet**。Servlet 就是#1 和#2， #2和#3之间的这个中间层。
 
-> 一个有意思的问题是，处理请求时只能用一个对象吗？当然不是，我们处理请求可能需要用到多个对象（比如controller，service),  但这些controller service 对象能叫servlet吗？其实理解了Servlet 后我们就不用纠结这个问题，黑白是非也是人为定义的不是。
+> 一个有意思的问题是，处理请求时只能用一个对象吗？当然不是，我们处理请求可能需要用到多个对象（比如controller，service),  但这些controller service 对象能叫servlet吗？。
 
 所以这三件事再具体一点总结下就是：
 
@@ -403,7 +405,7 @@ web开发，我们其实主要处理三件事：
 
 有同学可能说取决于你用什么框架， 但如果想换框架怎么办？
 
-因此我们就有了Servlet规范，来指导框架怎么写，servlet怎么写，以确保不同的Servlet容器（例如Tomcat、Jetty等）之间的兼容性。比如:
+因此我们就有了**Servlet规范**，来指导框架怎么写，servlet怎么写，以确保不同的Servlet容器（例如Tomcat、Jetty等）之间的兼容性。比如:
 
 1. 规定了所有Servlet类都必须实现`javax.servlet.Servlet ` 这个接口
 
@@ -421,7 +423,7 @@ web开发，我们其实主要处理三件事：
 
 > 规范、约定的思想随处可见，这个世界万物的运行本质上也是基于规范规则。
 
-再去理解什么是tomcat的时候发现tomcat 其实也实现了Servlet规范， 也可以理解为什么说Tomcat 是servlet 容器了。
+再去理解什么是tomcat的时候发现**tomcat 其实也实现了Servlet规范**， 也可以理解为什么说**Tomcat 是servlet 容器**了。
 
 **小结**
 
@@ -435,8 +437,6 @@ web开发，我们其实主要处理三件事：
 # Tomcat 的工作原理
 
 虽然应用大部分应用都是基于springboot及其默认内嵌的tomcat进行开发，但是脱离复杂的spring把tomcat作为独立部署的中间件可以更好的来帮助我们来学习和了解tomcat。
-
-**本文从一个简单的HTTP/1.1 请求出发，请留意涉及源码解析的部分都是基于tomcat 10.1 来进行。**
 
 1. **下载Tomcat**
 
@@ -510,7 +510,7 @@ curl https://dlcdn.apache.org/tomcat/tomcat-10/v10.1.18/bin/apache-tomcat-10.1.1
      
      ```
 
-     
+     这一步就是配置映射规则，让符合规则的请求被指定的servlet处理。
 
 5. **通过bin目录下的脚本启动Tomcat**
 
@@ -545,10 +545,6 @@ curl https://dlcdn.apache.org/tomcat/tomcat-10/v10.1.18/bin/apache-tomcat-10.1.1
 
 要做这些事肯定不会像我们demo版代码中那么简单，肯定经过设计的，但是无论怎么设计，每个接口和模块都有它自己的职责和要处理的事情，下面先看看tomcat 的整体架构。
 
-
-
-
-
 ## Tomcat架构
 
 Tomcat整体架构是一种分层的结构，我们先看一个结论图(来源于网络)， 后面我在分析源码的时候会逐渐把源码和这个图对应起来。
@@ -557,7 +553,7 @@ Tomcat整体架构是一种分层的结构，我们先看一个结论图(来源�
 
 在这小节我们可以先只关注`Server`、 `Service`、`Connector`、`Engine`、`Host`、`Context`、`Wrapper`， 记住这几个组件名字及他们的层级关系,  其中除Connector没有抽象出接口外，其余也都对应了tomcat中几个顶级接口名字(例如`org.apache.catalina.Server`), 而`StandardXXX` 是这些接口的实现。
 
-> 注意：**下文贴出的源代码部分都是精简过后的关键代码、个人认为是作为理解tomcat的必读部分**。过完必读部分后，若能下载全部源码通过debug来了解更多细节则更佳。
+注意：**下文贴出的源代码部分都是精简过后的关键代码、个人认为是作为理解tomcat的必读部分**。过完必读部分后，若能下载全部源码通过debug来了解更多细节则更佳，关于如何在本地编译并启动tomcat源码可以参考我的另一篇：[如何用IDEA本地编译启动tomcat](https://woaihuangfan.github.io/posts/%E7%94%A8idea%E6%9C%AC%E5%9C%B0%E7%BC%96%E8%AF%91%E5%90%AF%E5%8A%A8tomcat%E6%BA%90%E7%A0%81/)
 
 * **StandardServer**
 
@@ -844,7 +840,7 @@ public abstract class ContainerBase extends LifecycleMBeanBase implements Contai
 * 这个对象树的根节点是什么？上面的每个对象是怎么实例化的？
 * 为什么都实现了`Lifecycle`接口？
 
-要回答这个问题我们可以来了解下Tomcat 的启动过程。
+要回答这个问题我们可以先来了解下Tomcat 的启动过程。
 
 ### Tomcat 的启动过程
 
@@ -871,7 +867,7 @@ public abstract class ContainerBase extends LifecycleMBeanBase implements Contai
 
 
 
-Tomcat众多组件中有两个核心组件：连接器(`Connector`) 和容器(`Container`).
+**Tomcat众多组件中有两个核心组件：连接器(`Connector`) 和容器(`Container`).**
 
 
 
@@ -888,8 +884,6 @@ Connector的职责又可以细分为两部分：网络通信(EndPoint), 根据�
 > 我们在前面demo默认的应用层协议是HTTP/1.1 ，其实tomcat 还支持AJP, HTTP/2
 
 ### Connector的创建
-
-
 
 在`server.xml` 中有如下配置，当Digister解析xml文件发现这个配置时就会去实例化Connector.
 
@@ -1166,7 +1160,7 @@ public void register(final NioSocketWrapper socketWrapper) {
 **小结**
 
 1. 在tomcat start阶段会在Endpoint start 的时候创建唯一一个acceptor 线程 
-2. Acceptor线程通过死循环来调用`endpoint.serverSocketAccept()` 最终调用serverSocketChannel.accept()来接受新的连接，有新连接时会返回一个SocketChannel
+2. Acceptor线程通过死循环来调用`endpoint.serverSocketAccept()` 最终调用serverSocketChannel.accept()来接受新的连接，有新连接时会返回一个SocketChannel。这里和我们前面demo代码中的实现有个不同之处是前面demo代码中用的是BIO模式，而从tomcat 8.0开始默认NIO，这是NIO的实现方式。
 
 2. 然后调用`endpoint.setSocketOptions(socket)`,来封装SocketWrapper，并调用poller.register(socketWrapper)，创建PollerEvent， 并维护在Poller 内部的events 同步队列中。
 
@@ -2338,7 +2332,7 @@ protected Class<?> findClassInternal(String name) {
 
 ## Tomcat 和Springboot
 
-以这个[简单的springboot应用](https://github.com/woaihuangfan/how-tomcat-works/tree/main/springboot-on-tomcat)(Springboot 3.2.3)为例,
+以这个[简单的springboot应用](https://github.com/woaihuangfan/how-tomcat-works/tree/main/springboot-on-tomcat)(Springboot **3.2.3**, 注意老版本会略微有所不同，但大同小异)为例,
 
 **gradle** 
 
