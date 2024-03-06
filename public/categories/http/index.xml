@@ -1,0 +1,251 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+    <channel>
+        <title>http on 清露晨流, 新桐初引</title>
+        <link>http://localhost:1313/categories/http/</link>
+        <description>Recent content in http on 清露晨流, 新桐初引</description>
+        <generator>Hugo -- gohugo.io</generator>
+        <language>en-us</language>
+        <lastBuildDate>Thu, 29 Feb 2024 13:38:34 +0800</lastBuildDate><atom:link href="http://localhost:1313/categories/http/index.xml" rel="self" type="application/rss+xml" /><item>
+        <title>tomcat http 压缩与分块传输</title>
+        <link>http://localhost:1313/posts/tomcat-http-%E5%8E%8B%E7%BC%A9%E4%B8%8E%E5%88%86%E5%9D%97%E4%BC%A0%E8%BE%93/</link>
+        <pubDate>Thu, 29 Feb 2024 13:38:34 +0800</pubDate>
+        
+        <guid>http://localhost:1313/posts/tomcat-http-%E5%8E%8B%E7%BC%A9%E4%B8%8E%E5%88%86%E5%9D%97%E4%BC%A0%E8%BE%93/</guid>
+        <description>&lt;img src="http://localhost:1313/posts/tomcat-http-%E5%8E%8B%E7%BC%A9%E4%B8%8E%E5%88%86%E5%9D%97%E4%BC%A0%E8%BE%93/images/IMG_0942.png" alt="Featured image of post tomcat http 压缩与分块传输" /&gt;&lt;h1 id=&#34;http压缩&#34;&gt;HTTP压缩&lt;/h1&gt;
+&lt;p&gt;http压缩通常是指服务器对即将要发送给客户端的响应进行压缩，再由客户端进行解压缩，以此达到减少传输的数据量，提升接口或页面性能的目的。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;常见的压缩算法&lt;/strong&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;deflate: 基于deflate算法&lt;/li&gt;
+&lt;li&gt;gzip: GNU zip格式, 目前使用最为广泛&lt;/li&gt;
+&lt;li&gt;br:  一种新的开源压缩算法，专为HTTP内容的编码而设计&lt;/li&gt;
+&lt;li&gt;&amp;hellip;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;由此就产生一个问题，服务器怎么知道应该用哪种压缩算法进行压缩？&lt;/p&gt;
+&lt;h1 id=&#34;客户端和服务端就压缩方案进行协商&#34;&gt;客户端和服务端就压缩方案进行协商&lt;/h1&gt;
+&lt;p&gt;压缩方案协商为两步：&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;
+&lt;p&gt;客户端在发起请求的时候用&lt;code&gt;Accept-Encoding&lt;/code&gt; 这个header来告诉服务端自己支持哪些算法，例如：&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-xml&#34; data-lang=&#34;xml&#34;&gt;&lt;span class=&#34;line&#34;&gt;&lt;span class=&#34;cl&#34;&gt;Accept-Encoding: gzip, deflate, br
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;服务端会从客户端支持的算法中选择一个或多个对响应体进行压缩，然后通过&lt;code&gt;Content-Encoding&lt;/code&gt; 来告诉客户端自己用了哪种算法来压缩，以便客户端再用对应的算法来解压缩，例如：&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-xml&#34; data-lang=&#34;xml&#34;&gt;&lt;span class=&#34;line&#34;&gt;&lt;span class=&#34;cl&#34;&gt;Content-Encoding: gzip
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/li&gt;
+&lt;/ol&gt;
+&lt;h2 id=&#34;faq&#34;&gt;FAQ&lt;/h2&gt;
+&lt;ol&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;如果客户端支持的压缩算法但服务端都不支持那怎么办？&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;那就不压缩，爱咋咋。这时候在响应头里就没有显示的&lt;code&gt;Content-Encoding&lt;/code&gt;这个header了，或者说会采用它的默认值&lt;strong&gt;identity&lt;/strong&gt;, 表明没有对响应体进行压缩。&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;常看到响应头里有&lt;code&gt;Vary:Accept-Encoding&lt;/code&gt;, 这是什么？&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;Vary 首部字段常常在进行主动协商的响应中发送，用于指示选择算法中使用了请求信息的哪些部分。在 HTTP 中，主动协商是指服务器根据客户端的能力和偏好，以及资源的特性，选择最合适的响应进行发送。&lt;/p&gt;
+&lt;p&gt;简而言之，当服务器基于客户端请求的一些特定信息（比如 Accept-Encoding）来选择合适的响应时，它可以通过 Vary 首部字段来明确说明使用了哪些请求信息。这对于缓存和代理服务器来说尤为重要，因为它们可以根据 Vary 字段中列出的请求头部信息来判断是否可以使用缓存的响应，或者是否需要重新向源服务器请求新的响应。更多详细信息可以参考&lt;a class=&#34;link&#34; href=&#34;https://datatracker.ietf.org/doc/html/rfc7231#section-7.1.4&#34;  target=&#34;_blank&#34; rel=&#34;noopener&#34;
+    &gt;RFC 7231 section 7.1.4&lt;/a&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;类似的还看到&lt;code&gt;Transfer-Encoding&lt;/code&gt;, 这个又是什么？&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;Content-Encoding&lt;/code&gt; 用于描述消息体的压缩方式，而 &lt;code&gt;Transfer-Encoding&lt;/code&gt; 则用于指示消息传输时的编码方式，比如&lt;code&gt;Transfer-Encoding:chunked&lt;/code&gt;表明将消息进行分块传输。比如&lt;code&gt;Transfer-Encoding:identity&lt;/code&gt;表明消息体的长度已知且未进行编码&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;等等，分块传输是什么以及为什么要有分块传输？&lt;/strong&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ol&gt;
+&lt;h1 id=&#34;分块传输&#34;&gt;分块传输&lt;/h1&gt;
+&lt;p&gt;分块传输顾名思义就是将响应消息体分多次发送，一次发送一部分数据。我们先来了解一下与之对应的“&lt;strong&gt;一次性传输&lt;/strong&gt;”，也就是一次性发送所有数据。&lt;/p&gt;
+&lt;p&gt;HTTP协议是应用层协议，客户端和服务端进行交互是建立在TCP链接之上，现在假设服务端要向客户端传送数据，在传送完一段数据后下一步客户端该干嘛呢？&lt;/p&gt;
+&lt;p&gt;站在客户端视角的第一个疑问就是：&lt;strong&gt;这个数据传送完了吗？&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;所以为了让客户端知道数据是否传送完毕，一种方案就是服务端在传送响应体之前计算消息的长度，然后把这个长度通过&lt;code&gt;Content-Length&lt;/code&gt; 这个响应头告诉客户端，在客户端收到一部分数据后它可以计算收到的数据长度，如果和Conent-Length的值一样，那就可以认为数据传送完了然后客户端下一步就可以做自己想做的事(比如关闭TCP链接，或者发起一个新的请求)。 这就是一次性传输及&lt;code&gt;Content-Length&lt;/code&gt; 在这个过程中发挥的作用。另一种方案是服务端在发送完数据就关闭TCP链接，这样客户端看到服务端关闭了链接，也可以约定只要你关闭链接我就认为数据传输完了，但是基本上不会这么做。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;&lt;strong&gt;如果Content-Length 和真实长度不一致会怎样？&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;如果Content-Length小于真实长度，则客户端会对内容进行裁剪，对外表现就是数据不完整。&lt;/p&gt;
+&lt;p&gt;如果Content-Length小于真实长度，则客户端请求会一直pengding, 因为它认为响应还没有结束。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;在第一种方案中需要提前计算消息长度，对于普通的较小的文本还好说，但如果消息很长，很大，比如一些文件，这个计算过程很费时间或者空间，在客户端看来这个请求的响应就很慢。所以就有了分块传输的做法，不计算长度，把数据分成不同的小块逐步发送。&lt;/p&gt;
+&lt;p&gt;例如：&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-kotlin&#34; data-lang=&#34;kotlin&#34;&gt;&lt;span class=&#34;line&#34;&gt;&lt;span class=&#34;cl&#34;&gt;&lt;span class=&#34;n&#34;&gt;socket&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;getOutputStream&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;().&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;write&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;s2&#34;&gt;&amp;#34;HTTP/1.1 200 OK&lt;/span&gt;&lt;span class=&#34;se&#34;&gt;\r\n&lt;/span&gt;&lt;span class=&#34;s2&#34;&gt;&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;toByteArray&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;())&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class=&#34;line&#34;&gt;&lt;span class=&#34;cl&#34;&gt;&lt;span class=&#34;n&#34;&gt;socket&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;getOutputStream&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;().&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;write&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;s2&#34;&gt;&amp;#34;Transfer-Encoding: chunked&lt;/span&gt;&lt;span class=&#34;se&#34;&gt;\r\n&lt;/span&gt;&lt;span class=&#34;s2&#34;&gt;&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;toByteArray&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;())&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class=&#34;line&#34;&gt;&lt;span class=&#34;cl&#34;&gt;&lt;span class=&#34;n&#34;&gt;socket&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;getOutputStream&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;().&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;write&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;s2&#34;&gt;&amp;#34;Content-Type: text/plain&lt;/span&gt;&lt;span class=&#34;se&#34;&gt;\r\n&lt;/span&gt;&lt;span class=&#34;s2&#34;&gt;&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;toByteArray&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;())&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class=&#34;line&#34;&gt;&lt;span class=&#34;cl&#34;&gt;&lt;span class=&#34;n&#34;&gt;socket&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;getOutputStream&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;().&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;write&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;s2&#34;&gt;&amp;#34;&lt;/span&gt;&lt;span class=&#34;se&#34;&gt;\r\n&lt;/span&gt;&lt;span class=&#34;s2&#34;&gt;&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;toByteArray&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;())&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class=&#34;line&#34;&gt;&lt;span class=&#34;cl&#34;&gt;&lt;span class=&#34;n&#34;&gt;socket&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;getOutputStream&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;().&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;write&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;s2&#34;&gt;&amp;#34;5&lt;/span&gt;&lt;span class=&#34;se&#34;&gt;\r\n&lt;/span&gt;&lt;span class=&#34;s2&#34;&gt;&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;toByteArray&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;())&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class=&#34;line&#34;&gt;&lt;span class=&#34;cl&#34;&gt;&lt;span class=&#34;n&#34;&gt;socket&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;getOutputStream&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;().&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;write&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;s2&#34;&gt;&amp;#34;123&lt;/span&gt;&lt;span class=&#34;se&#34;&gt;\r\n\r\n&lt;/span&gt;&lt;span class=&#34;s2&#34;&gt;&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;toByteArray&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;())&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class=&#34;line&#34;&gt;&lt;span class=&#34;cl&#34;&gt;&lt;span class=&#34;n&#34;&gt;socket&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;getOutputStream&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;().&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;flush&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;()&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class=&#34;line&#34;&gt;&lt;span class=&#34;cl&#34;&gt;&lt;span class=&#34;n&#34;&gt;socket&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;getOutputStream&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;().&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;write&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;s2&#34;&gt;&amp;#34;2&lt;/span&gt;&lt;span class=&#34;se&#34;&gt;\r\n&lt;/span&gt;&lt;span class=&#34;s2&#34;&gt;&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;toByteArray&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;())&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class=&#34;line&#34;&gt;&lt;span class=&#34;cl&#34;&gt;&lt;span class=&#34;n&#34;&gt;socket&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;getOutputStream&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;().&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;write&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;s2&#34;&gt;&amp;#34;ab&lt;/span&gt;&lt;span class=&#34;se&#34;&gt;\r\n&lt;/span&gt;&lt;span class=&#34;s2&#34;&gt;&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;toByteArray&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;())&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class=&#34;line&#34;&gt;&lt;span class=&#34;cl&#34;&gt;&lt;span class=&#34;n&#34;&gt;socket&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;getOutputStream&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;().&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;flush&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;()&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class=&#34;line&#34;&gt;&lt;span class=&#34;cl&#34;&gt;&lt;span class=&#34;n&#34;&gt;socket&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;getOutputStream&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;().&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;write&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;s2&#34;&gt;&amp;#34;0&lt;/span&gt;&lt;span class=&#34;se&#34;&gt;\r\n&lt;/span&gt;&lt;span class=&#34;s2&#34;&gt;&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;toByteArray&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;())&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class=&#34;line&#34;&gt;&lt;span class=&#34;cl&#34;&gt;&lt;span class=&#34;n&#34;&gt;socket&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;getOutputStream&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;().&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;write&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;s2&#34;&gt;&amp;#34;&lt;/span&gt;&lt;span class=&#34;se&#34;&gt;\r\n&lt;/span&gt;&lt;span class=&#34;s2&#34;&gt;&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;toByteArray&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;())&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class=&#34;line&#34;&gt;&lt;span class=&#34;cl&#34;&gt;&lt;span class=&#34;n&#34;&gt;socket&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;getOutputStream&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;().&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;write&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;s2&#34;&gt;&amp;#34;13&lt;/span&gt;&lt;span class=&#34;se&#34;&gt;\r\n&lt;/span&gt;&lt;span class=&#34;s2&#34;&gt;&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;toByteArray&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;())&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class=&#34;line&#34;&gt;&lt;span class=&#34;cl&#34;&gt;&lt;span class=&#34;n&#34;&gt;socket&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;getOutputStream&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;().&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;write&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;s2&#34;&gt;&amp;#34;am I ignored?&lt;/span&gt;&lt;span class=&#34;se&#34;&gt;\r\n&lt;/span&gt;&lt;span class=&#34;s2&#34;&gt;&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;toByteArray&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;())&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class=&#34;line&#34;&gt;&lt;span class=&#34;cl&#34;&gt;&lt;span class=&#34;n&#34;&gt;socket&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;getOutputStream&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;().&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;flush&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;()&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;分块传输方法&lt;/span&gt;&lt;span class=&#34;err&#34;&gt;：&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;ul&gt;
+&lt;li&gt;需要在响应头中添加：Transfer-Encoding: chunked&lt;/li&gt;
+&lt;li&gt;响应头结束需要添加CRLF(\r\n)表示响应体的开始&lt;/li&gt;
+&lt;li&gt;每一个响应块第一行表示该块的长度(结尾是CRLF)，然后是数据本身，遇到CRLF,表明块结束，若第一行长度和真实数据长度不一致通常客户端会解析失败&lt;/li&gt;
+&lt;li&gt;最后一个块必须长度为0，不包含任何数据并依旧以CRLF结尾。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h1 id=&#34;tomcat-中的分块传输与响应压缩&#34;&gt;Tomcat 中的分块传输与响应压缩&lt;/h1&gt;
+&lt;p&gt;tomcat HTTP压缩功能手动开启方式如下：在&lt;code&gt;server.xml&lt;/code&gt;中&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-xml&#34; data-lang=&#34;xml&#34;&gt;&lt;span class=&#34;line&#34;&gt;&lt;span class=&#34;cl&#34;&gt;&lt;span class=&#34;nt&#34;&gt;&amp;lt;Connector&lt;/span&gt; &lt;span class=&#34;na&#34;&gt;port=&lt;/span&gt;&lt;span class=&#34;s&#34;&gt;&amp;#34;8080&amp;#34;&lt;/span&gt; &lt;span class=&#34;na&#34;&gt;protocol=&lt;/span&gt;&lt;span class=&#34;s&#34;&gt;&amp;#34;HTTP/1.1&amp;#34;&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class=&#34;line&#34;&gt;&lt;span class=&#34;cl&#34;&gt;     &lt;span class=&#34;na&#34;&gt;connectionTimeout=&lt;/span&gt;&lt;span class=&#34;s&#34;&gt;&amp;#34;20000&amp;#34;&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class=&#34;line&#34;&gt;&lt;span class=&#34;cl&#34;&gt;     &lt;span class=&#34;na&#34;&gt;compression=&lt;/span&gt;&lt;span class=&#34;s&#34;&gt;&amp;#34;on&amp;#34;&lt;/span&gt; &lt;span class=&#34;err&#34;&gt;&amp;lt;!--&lt;/span&gt; &lt;span class=&#34;err&#34;&gt;开启压缩&lt;/span&gt; &lt;span class=&#34;err&#34;&gt;--&lt;/span&gt;&lt;span class=&#34;nt&#34;&gt;&amp;gt;&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class=&#34;line&#34;&gt;&lt;span class=&#34;cl&#34;&gt;     compressionMinSize=&amp;#34;10&amp;#34; &lt;span class=&#34;c&#34;&gt;&amp;lt;!-- 压缩阀值, 当消息长度超过的时候才进行压缩 --&amp;gt;&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class=&#34;line&#34;&gt;&lt;span class=&#34;cl&#34;&gt;     &lt;span class=&#34;c&#34;&gt;&amp;lt;!-- 压缩类型 --&amp;gt;&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class=&#34;line&#34;&gt;&lt;span class=&#34;cl&#34;&gt;     compressableMimeType=&amp;#34;text/html,text/xml,text/javascript,application/javascript,text/css,text/plain,text/json&amp;#34;
+&lt;/span&gt;&lt;/span&gt;&lt;span class=&#34;line&#34;&gt;&lt;span class=&#34;cl&#34;&gt;     redirectPort=&amp;#34;8443&amp;#34;/&amp;gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;更多详细配置方式可参考&lt;a class=&#34;link&#34; href=&#34;https://tomcat.apache.org/tomcat-10.1-doc/config/http.html&#34;  target=&#34;_blank&#34; rel=&#34;noopener&#34;
+    &gt;Apache Tomcat 10 Configuration Reference&lt;/a&gt;&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;压缩就会更好吗？不是，压缩意味着服务端更多的资源消耗&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;&lt;strong&gt;用来测试的Servlet&lt;/strong&gt;&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-kotlin&#34; data-lang=&#34;kotlin&#34;&gt;&lt;span class=&#34;line&#34;&gt;&lt;span class=&#34;cl&#34;&gt;&lt;span class=&#34;k&#34;&gt;class&lt;/span&gt; &lt;span class=&#34;nc&#34;&gt;TestCompressionServlet&lt;/span&gt; &lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;HttpServlet&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;()&lt;/span&gt; &lt;span class=&#34;p&#34;&gt;{&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class=&#34;line&#34;&gt;&lt;span class=&#34;cl&#34;&gt;    &lt;span class=&#34;k&#34;&gt;override&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;fun&lt;/span&gt; &lt;span class=&#34;nf&#34;&gt;doGet&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;request&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;HttpServletRequest&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;response&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;HttpServletResponse&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;)&lt;/span&gt; &lt;span class=&#34;p&#34;&gt;{&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class=&#34;line&#34;&gt;&lt;span class=&#34;cl&#34;&gt;        &lt;span class=&#34;k&#34;&gt;val&lt;/span&gt; &lt;span class=&#34;py&#34;&gt;stringBuilder&lt;/span&gt; &lt;span class=&#34;p&#34;&gt;=&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;StringBuilder&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;()&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class=&#34;line&#34;&gt;&lt;span class=&#34;cl&#34;&gt;        &lt;span class=&#34;k&#34;&gt;for&lt;/span&gt; &lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;i&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;in&lt;/span&gt; &lt;span class=&#34;m&#34;&gt;1&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;until&lt;/span&gt; &lt;span class=&#34;m&#34;&gt;10000000&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;)&lt;/span&gt; &lt;span class=&#34;p&#34;&gt;{&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class=&#34;line&#34;&gt;&lt;span class=&#34;cl&#34;&gt;            &lt;span class=&#34;n&#34;&gt;stringBuilder&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;append&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;s2&#34;&gt;&amp;#34;Hi,&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;)&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class=&#34;line&#34;&gt;&lt;span class=&#34;cl&#34;&gt;        &lt;span class=&#34;p&#34;&gt;}&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class=&#34;line&#34;&gt;&lt;span class=&#34;cl&#34;&gt;        &lt;span class=&#34;n&#34;&gt;response&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;contentType&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;=&lt;/span&gt;&lt;span class=&#34;s2&#34;&gt;&amp;#34;text/html&amp;#34;&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class=&#34;line&#34;&gt;&lt;span class=&#34;cl&#34;&gt;        &lt;span class=&#34;n&#34;&gt;response&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;writer&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;write&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;stringBuilder&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;toString&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;())&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class=&#34;line&#34;&gt;&lt;span class=&#34;cl&#34;&gt;    &lt;span class=&#34;p&#34;&gt;}&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class=&#34;line&#34;&gt;&lt;span class=&#34;cl&#34;&gt;&lt;span class=&#34;p&#34;&gt;}&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;这里会向客户端返回一个很长的字符串，在&lt;a class=&#34;link&#34; href=&#34;https://woaihuangfan.github.io/posts/tomcat%E6%9E%B6%E6%9E%84%E5%8E%9F%E7%90%86%E8%A7%A3%E6%9E%90/#%E5%93%8D%E5%BA%94%E8%BF%87%E7%A8%8B&#34;  target=&#34;_blank&#34; rel=&#34;noopener&#34;
+    &gt;《Tomcat架构原理解析》&lt;/a&gt; 中我们说到servelt 通过&lt;code&gt;response.writer.write&lt;/code&gt; 写入响应的时候其实是先写入org.apache.catalina.connector.Response内部维护的CharBuffer中，最后会把CharBuffer转为ByteBuffer中然后交给SocketHandler的writeBuffer最后才会写入socket中。&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;http://localhost:1313/posts/tomcat-http-%E5%8E%8B%E7%BC%A9%E4%B8%8E%E5%88%86%E5%9D%97%E4%BC%A0%E8%BE%93/images/image-20240301104640334.png&#34;
+	width=&#34;2919&#34;
+	height=&#34;742&#34;
+	srcset=&#34;http://localhost:1313/posts/tomcat-http-%E5%8E%8B%E7%BC%A9%E4%B8%8E%E5%88%86%E5%9D%97%E4%BC%A0%E8%BE%93/images/image-20240301104640334_hu21c632110b1e9f6aef928c0d61907acb_176649_480x0_resize_box_3.png 480w, http://localhost:1313/posts/tomcat-http-%E5%8E%8B%E7%BC%A9%E4%B8%8E%E5%88%86%E5%9D%97%E4%BC%A0%E8%BE%93/images/image-20240301104640334_hu21c632110b1e9f6aef928c0d61907acb_176649_1024x0_resize_box_3.png 1024w&#34;
+	loading=&#34;lazy&#34;
+	
+		alt=&#34;image-20240301104640334&#34;
+	
+	
+		class=&#34;gallery-image&#34; 
+		data-flex-grow=&#34;393&#34;
+		data-flex-basis=&#34;944px&#34;
+	
+&gt;&lt;/p&gt;
+&lt;p&gt;我们现在要写入的是一个很长的字符串，而Buffer却只有8KB, 怎么办？Tomcat 是这么处理的：&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;
+&lt;p&gt;在写入CharBuffer 后，如果CharBuffer满了会将CharBuffer 中的数据flush 到ByteBuffer, 然后清空CharBuffer，源码位置：&lt;code&gt;org.apache.catalina.connector.OutputBuffer#write&lt;/code&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;剩下的数据继续写入CharBuffer, 重复1的步骤&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;如果在#1中，ByteBuffer也满了，会flush 数据到&lt;code&gt;org.apache.coyote.Response&lt;/code&gt;中并清空ByteBuffer，调用它的write方法， 最终会调用到&lt;code&gt;Http11OutputBuffer&lt;/code&gt;的doWrite方法。源码位置：&lt;code&gt;org.apache.coyote.http11.Http11OutputBuffer#doWrite&lt;/code&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;这时候Http11OutputBuffer如果发现Response 还没commit, 会通过action调用&lt;code&gt;Http11Processor&lt;/code&gt; 来commit response，这一步会准备响应的响应行(包括协议和状态码，例如：HTTP/1.1 200）以及响应头, 然后将这部分信息写到Http11OutputBuffer的headerBuffer中，&lt;/li&gt;
+&lt;li&gt;headerBuffer的大小可进行配置，若超出大小则抛BufferOverflowException。&lt;/li&gt;
+&lt;li&gt;然后通过outputBuffer.commit()将这部分数据存到socketBufferHandler的writeBuffer中，如果writeBuffer也满了则会写到socket中。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;在3#中准备响应头的时候(源码位置：&lt;code&gt;org.apache.coyote.http11.Http11Processor#prepareResponse&lt;/code&gt;)，如果开启了压缩功能：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;添加&lt;code&gt;Vary: accept-encoding&lt;/code&gt; header。&lt;/li&gt;
+&lt;li&gt;根据Request中accept-encoding这个header传过来的值判断客户端是否支持&lt;code&gt;gzip&lt;/code&gt;，若支持则设置contentLength为-1， 若不支持那就不压缩。也就是说tomcat 默认只支持gzip压缩&lt;/li&gt;
+&lt;li&gt;如果contentLength不为-1，则添加&lt;code&gt;ChunkedOutputFilter&lt;/code&gt;为activeFilters&lt;/li&gt;
+&lt;li&gt;如果发现支持gzip, 则会添加&lt;code&gt;GzipOutputFilter&lt;/code&gt;为activeFilters&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;然后继续回到3#中Http11OutputBuffer的doWrite 方法，在commit response 之后会调用GzipOutputFilter的doWrite方法, 接着6#。&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;GZIPOutputStream的doWrite方法会通过调用native 方法来将数据读取到内存中，然后进行压缩并存到GZIPOutputStream内部的byte数组buf中。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;压缩的逻辑由JDK封装的&lt;code&gt;java.util.zip.Deflater&lt;/code&gt; 来调用native实现&lt;/li&gt;
+&lt;li&gt;但是此处不会一有数据就马上进行压缩(NO_FLUSH 模式)，而是数据累计到一定量之后才进行压缩, 具体多少数据量才压缩由Deflater决定.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;如果压缩后的数据一个buf 装不下, 就将buf 传给ChunkedOutputFilter(第7#），继续往buf里填充数据。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;当所有现阶段已压缩的数据都交给ChunkedOutputFilter后，&lt;code&gt;GzipOutputFilter#doWrite&lt;/code&gt;方法才算结束&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-java&#34; data-lang=&#34;java&#34;&gt;&lt;span class=&#34;line&#34;&gt;&lt;span class=&#34;cl&#34;&gt;&lt;span class=&#34;kd&#34;&gt;public&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;kt&#34;&gt;void&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;nf&#34;&gt;write&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;kt&#34;&gt;byte&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;[]&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;b&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;kt&#34;&gt;int&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;off&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;kt&#34;&gt;int&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;len&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;kd&#34;&gt;throws&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;IOException&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;p&#34;&gt;{&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class=&#34;line&#34;&gt;&lt;span class=&#34;cl&#34;&gt;&lt;span class=&#34;w&#34;&gt;    &lt;/span&gt;&lt;span class=&#34;p&#34;&gt;...&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class=&#34;line&#34;&gt;&lt;span class=&#34;cl&#34;&gt;&lt;span class=&#34;w&#34;&gt;    &lt;/span&gt;&lt;span class=&#34;k&#34;&gt;if&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;!&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;def&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;na&#34;&gt;finished&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;())&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;p&#34;&gt;{&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class=&#34;line&#34;&gt;&lt;span class=&#34;cl&#34;&gt;&lt;span class=&#34;w&#34;&gt;        &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;def&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;na&#34;&gt;setInput&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;b&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;off&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;len&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;);&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class=&#34;line&#34;&gt;&lt;span class=&#34;cl&#34;&gt;&lt;span class=&#34;w&#34;&gt;        &lt;/span&gt;&lt;span class=&#34;k&#34;&gt;while&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;!&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;def&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;na&#34;&gt;needsInput&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;())&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;p&#34;&gt;{&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class=&#34;line&#34;&gt;&lt;span class=&#34;cl&#34;&gt;&lt;span class=&#34;w&#34;&gt;            &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;deflate&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;();&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class=&#34;line&#34;&gt;&lt;span class=&#34;cl&#34;&gt;&lt;span class=&#34;w&#34;&gt;        &lt;/span&gt;&lt;span class=&#34;p&#34;&gt;}&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class=&#34;line&#34;&gt;&lt;span class=&#34;cl&#34;&gt;&lt;span class=&#34;w&#34;&gt;    &lt;/span&gt;&lt;span class=&#34;p&#34;&gt;}&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class=&#34;line&#34;&gt;&lt;span class=&#34;cl&#34;&gt;&lt;span class=&#34;w&#34;&gt;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;}&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;源码位置：&lt;code&gt;org.apache.coyote.http11.filters.GzipOutputFilter#doWrite&lt;/code&gt; 及&lt;code&gt;java.util.zip.Deflater#deflate(byte[], int, int, int)&lt;/code&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;将到buf中的byte传给ChunkedOutputFilter，调用ChunkedOutputFilter的doWrite方法。ChunkedOutputFilter会构造需要分开传输的块，然后将块写入到socketBufferHandler的writeBuffer中。如果writeBuffer也满了则会写到socket中，开始分块传输。&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;继续1#，2#，5#，6#, 7#直到servlet write结束。&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;经过前面几步后这个长响应体大部分都已经被传输到客户端，还有一小部分可能存在CharBuffer和ByteBuffer中，servlet 的service 方法也会执行结束，来到Adapter的&lt;code&gt;response.finishResponse()&lt;/code&gt; 阶段，源码位置：&lt;code&gt;org.apache.catalina.connector.Response#finishResponse&lt;/code&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ol&gt;
+&lt;ul&gt;
+&lt;li&gt;如果CharBuffer中有数据则flush到ByteBuffer，如果ByteBuffer满了则继续3#，5#。&lt;/li&gt;
+&lt;li&gt;调用doFlush方法，再次flush CharBuffer 和flush ByteBuffer。&lt;/li&gt;
+&lt;li&gt;通过Close Action调用Http11Processor的finishResponse方法，然后调用到GzipOutputFilter的end方法，标记finish为true。&lt;/li&gt;
+&lt;li&gt;采用FINISH模式继续压缩，此时会把剩下数据继续压缩(因为有可能内存中累计的数据量还没到deflater的标准），压缩后的数据依旧存到buf中并继续第7#，8#步。源码位置：&lt;code&gt;java.util.zip.GZIPOutputStream#finish&lt;/code&gt;
+* 直到内存中所有响应数据压缩并写到buf完成，标记finished 为true。
+* 如果buf满载的情况下，块中第一行标明数据长度会是512，用十六进制200表示。&lt;/li&gt;
+&lt;li&gt;最后按照GZIP 算法要求构造数据尾部，并继续传递给ChunkedOutputFilter，至此全部的压缩数据都已处理完成&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;img src=&#34;http://localhost:1313/posts/tomcat-http-%E5%8E%8B%E7%BC%A9%E4%B8%8E%E5%88%86%E5%9D%97%E4%BC%A0%E8%BE%93/images/tomcat%E5%8E%8B%E7%BC%A9%E4%B8%8E%E5%88%86%E5%9D%97%E4%BC%A0%E8%BE%93%E6%95%B0%E6%8D%AE%E6%B5%81%E5%90%91.png&#34;
+	width=&#34;1288&#34;
+	height=&#34;700&#34;
+	srcset=&#34;http://localhost:1313/posts/tomcat-http-%E5%8E%8B%E7%BC%A9%E4%B8%8E%E5%88%86%E5%9D%97%E4%BC%A0%E8%BE%93/images/tomcat%E5%8E%8B%E7%BC%A9%E4%B8%8E%E5%88%86%E5%9D%97%E4%BC%A0%E8%BE%93%E6%95%B0%E6%8D%AE%E6%B5%81%E5%90%91_hu2b31222f0548f382406fa2c9f0c6e4f8_69668_480x0_resize_box_3.png 480w, http://localhost:1313/posts/tomcat-http-%E5%8E%8B%E7%BC%A9%E4%B8%8E%E5%88%86%E5%9D%97%E4%BC%A0%E8%BE%93/images/tomcat%E5%8E%8B%E7%BC%A9%E4%B8%8E%E5%88%86%E5%9D%97%E4%BC%A0%E8%BE%93%E6%95%B0%E6%8D%AE%E6%B5%81%E5%90%91_hu2b31222f0548f382406fa2c9f0c6e4f8_69668_1024x0_resize_box_3.png 1024w&#34;
+	loading=&#34;lazy&#34;
+	
+		alt=&#34;tomcat压缩与分块传输数据流向&#34;
+	
+	
+		class=&#34;gallery-image&#34; 
+		data-flex-grow=&#34;184&#34;
+		data-flex-basis=&#34;441px&#34;
+	
+&gt;&lt;/p&gt;
+&lt;p&gt;上述servlet开启压缩前，浏览器中显示响应大小约为30MB,&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;http://localhost:1313/posts/tomcat-http-%E5%8E%8B%E7%BC%A9%E4%B8%8E%E5%88%86%E5%9D%97%E4%BC%A0%E8%BE%93/images/image-20240301184203095.png&#34;
+	width=&#34;2588&#34;
+	height=&#34;992&#34;
+	srcset=&#34;http://localhost:1313/posts/tomcat-http-%E5%8E%8B%E7%BC%A9%E4%B8%8E%E5%88%86%E5%9D%97%E4%BC%A0%E8%BE%93/images/image-20240301184203095_hufbe403590de9d76f014cfc9701811700_227582_480x0_resize_box_3.png 480w, http://localhost:1313/posts/tomcat-http-%E5%8E%8B%E7%BC%A9%E4%B8%8E%E5%88%86%E5%9D%97%E4%BC%A0%E8%BE%93/images/image-20240301184203095_hufbe403590de9d76f014cfc9701811700_227582_1024x0_resize_box_3.png 1024w&#34;
+	loading=&#34;lazy&#34;
+	
+		alt=&#34;image-20240301184203095&#34;
+	
+	
+		class=&#34;gallery-image&#34; 
+		data-flex-grow=&#34;260&#34;
+		data-flex-basis=&#34;626px&#34;
+	
+&gt;&lt;/p&gt;
+&lt;p&gt;开启压缩后传输体积减少了1000倍！&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;http://localhost:1313/posts/tomcat-http-%E5%8E%8B%E7%BC%A9%E4%B8%8E%E5%88%86%E5%9D%97%E4%BC%A0%E8%BE%93/images/image-20240301184051702.png&#34;
+	width=&#34;2270&#34;
+	height=&#34;918&#34;
+	srcset=&#34;http://localhost:1313/posts/tomcat-http-%E5%8E%8B%E7%BC%A9%E4%B8%8E%E5%88%86%E5%9D%97%E4%BC%A0%E8%BE%93/images/image-20240301184051702_hu3723bea185025ae492983961b18f917b_275406_480x0_resize_box_3.png 480w, http://localhost:1313/posts/tomcat-http-%E5%8E%8B%E7%BC%A9%E4%B8%8E%E5%88%86%E5%9D%97%E4%BC%A0%E8%BE%93/images/image-20240301184051702_hu3723bea185025ae492983961b18f917b_275406_1024x0_resize_box_3.png 1024w&#34;
+	loading=&#34;lazy&#34;
+	
+		alt=&#34;image-20240301184051702&#34;
+	
+	
+		class=&#34;gallery-image&#34; 
+		data-flex-grow=&#34;247&#34;
+		data-flex-basis=&#34;593px&#34;
+	
+&gt;&lt;/p&gt;
+</description>
+        </item>
+        
+    </channel>
+</rss>

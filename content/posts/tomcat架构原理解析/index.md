@@ -2552,7 +2552,7 @@ public void start() throws LifecycleException {
 
 我们知道Springboot 框架就包含spring mvc, 所有请求在到达tomcat后，会交给`DispathcerServlet` 来处理，DispatcherServlet 会再进一步对请求进行分发，交给各自handler/controller来处理。
 
-![Tomcat and Spring](images/Tomcat-and-Spring.png)
+![Tomcat and Spring](images/Tomcat and Spring.png)
 
 
 

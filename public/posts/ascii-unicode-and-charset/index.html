@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="en-us" dir="ltr">
+    <head><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=1313&amp;path=livereload" data-no-instant defer></script><meta charset='utf-8'>
+<meta name='viewport' content='width=device-width, initial-scale=1'><meta name='description' content='在讨论这个问题之前先抛出一个问题：我们都知道计算机内部都是二进制，那么给定一些文本字符串比如英文单词Good, 我们是怎么知道要把它转化为怎样的二进制的？
+'>
+<title>ASCII、Unicode和UTF-8与字符编码</title>
+
+<link rel='canonical' href='http://localhost:1313/posts/ascii-unicode-and-charset/'>
+
+<link rel="stylesheet" href="/scss/style.min.876ff6cde480707ded0466265c1f084444129bedc60fe81e5f83398e4410d786.css"><meta property='og:title' content='ASCII、Unicode和UTF-8与字符编码'>
+<meta property='og:description' content='在讨论这个问题之前先抛出一个问题：我们都知道计算机内部都是二进制，那么给定一些文本字符串比如英文单词Good, 我们是怎么知道要把它转化为怎样的二进制的？
+'>
+<meta property='og:url' content='http://localhost:1313/posts/ascii-unicode-and-charset/'>
+<meta property='og:site_name' content='清露晨流, 新桐初引'>
+<meta property='og:type' content='article'><meta property='article:section' content='Posts' /><meta property='article:published_time' content='2024-01-02T14:38:04&#43;08:00'/><meta property='article:modified_time' content='2024-01-02T14:38:04&#43;08:00'/><meta property='og:image' content='http://localhost:1313/posts/ascii-unicode-and-charset/images/birds.png' />
+<meta name="twitter:title" content="ASCII、Unicode和UTF-8与字符编码">
+<meta name="twitter:description" content="在讨论这个问题之前先抛出一个问题：我们都知道计算机内部都是二进制，那么给定一些文本字符串比如英文单词Good, 我们是怎么知道要把它转化为怎样的二进制的？
+"><meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:image" content='http://localhost:1313/posts/ascii-unicode-and-charset/images/birds.png' />
+    <link rel="shortcut icon" href="/favicon.svg" />
+
+    </head>
+    <body class="
+    article-page
+    ">
+    <script>
+        (function() {
+            const colorSchemeKey = 'StackColorScheme';
+            if(!localStorage.getItem(colorSchemeKey)){
+                localStorage.setItem(colorSchemeKey, "auto");
+            }
+        })();
+    </script><script>
+    (function() {
+        const colorSchemeKey = 'StackColorScheme';
+        const colorSchemeItem = localStorage.getItem(colorSchemeKey);
+        const supportDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches === true;
+
+        if (colorSchemeItem == 'dark' || colorSchemeItem === 'auto' && supportDarkMode) {
+            
+
+            document.documentElement.dataset.scheme = 'dark';
+        } else {
+            document.documentElement.dataset.scheme = 'light';
+        }
+    })();
+</script>
+<div class="container main-container flex on-phone--column extended"><aside class="sidebar left-sidebar sticky ">
+    <button class="hamburger hamburger--spin" type="button" id="toggle-menu" aria-label="Toggle Menu">
+        <span class="hamburger-box">
+            <span class="hamburger-inner"></span>
+        </span>
+    </button>
+
+    <header>
+        
+            
+            <figure class="site-avatar">
+                <a href="/">
+                
+                    
+                    
+                    
+                        
+                        <img src="/img/avatar_hu13ebfac54b51a4b7ee52e30ffb590fe7_360247_300x0_resize_box_3.png" width="300"
+                            height="400" class="site-logo" loading="lazy" alt="Avatar">
+                    
+                
+                </a>
+                
+                    <span class="emoji">🍚</span>
+                
+            </figure>
+            
+        
+        
+        <div class="site-meta">
+            <h1 class="site-name"><a href="/">清露晨流, 新桐初引</a></h1>
+            <h2 class="site-description">The only way of humans have figured out of getting somewhere is to leave something behind.</h2>
+        </div>
+    </header><ol class="menu" id="main-menu">
+        
+        
+        
+        <li >
+            <a href='/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-home" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <polyline points="5 12 3 12 12 3 21 12 19 12" />
+  <path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-7" />
+  <path d="M9 21v-6a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v6" />
+</svg>
+
+
+
+                
+                <span>Home</span>
+            </a>
+        </li>
+        
+        
+        <li  class='current' >
+            <a href='/posts/' >
+                
+                
+                
+                    <svg t="1709175193721" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="2392"
+     width="200" height="200">
+    <path d="M811.008 860.672H308.736c-30.72 0-55.296-27.648-55.296-61.44v-675.84c0-33.792 24.576-61.44 55.296-61.44h330.752c8.704 0 15.36 6.656 15.36 15.36s-6.656 15.36-15.36 15.36H308.736c-13.312 0-24.576 13.824-24.576 30.72v675.84c0 16.896 11.264 30.72 24.576 30.72h502.272c13.312 0 24.576-13.824 24.576-30.72V305.664L691.2 136.192c-5.632-6.656-4.608-16.384 1.536-21.504 6.656-5.632 16.384-4.608 21.504 1.536l147.968 173.568c2.56 2.56 3.584 6.144 3.584 9.728V798.72c0.512 34.304-24.064 61.952-54.784 61.952z"
+          p-id="2393"></path>
+    <path d="M715.264 964.608H212.992c-30.72 0-55.296-27.648-55.296-61.44v-675.84c0-8.704 6.656-15.36 15.36-15.36s15.36 6.656 15.36 15.36v675.84c0 16.896 11.264 30.72 24.576 30.72h502.272c8.704 0 15.36 6.656 15.36 15.36s-6.656 15.36-15.36 15.36z"
+          p-id="2394"></path>
+    <path d="M734.208 522.752H369.664c-8.704 0-15.36-6.656-15.36-15.36s6.656-15.36 15.36-15.36h364.544c8.704 0 15.36 6.656 15.36 15.36s-6.656 15.36-15.36 15.36zM734.208 603.648H369.664c-8.704 0-15.36-6.656-15.36-15.36s6.656-15.36 15.36-15.36h364.544c8.704 0 15.36 6.656 15.36 15.36s-6.656 15.36-15.36 15.36zM648.192 685.056H369.664c-8.704 0-15.36-6.656-15.36-15.36s6.656-15.36 15.36-15.36h278.528c8.704 0 15.36 6.656 15.36 15.36s-6.656 15.36-15.36 15.36zM586.752 441.344H369.664c-8.704 0-15.36-6.656-15.36-15.36s6.656-15.36 15.36-15.36h217.088c8.704 0 15.36 6.656 15.36 15.36s-6.656 15.36-15.36 15.36zM791.04 315.392h-151.552c-8.704 0-15.36-6.656-15.36-15.36V77.312c0-8.704 6.656-15.36 15.36-15.36s15.36 6.656 15.36 15.36v207.36h136.192c8.704 0 15.36 6.656 15.36 15.36s-6.656 15.36-15.36 15.36z"
+          p-id="2395"></path>
+</svg>
+                
+                <span>Posts</span>
+            </a>
+        </li>
+        
+        
+        <li >
+            <a href='/page/about/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-user" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="12" cy="7" r="4" />
+  <path d="M6 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2" />
+</svg>
+
+
+
+                
+                <span>About</span>
+            </a>
+        </li>
+        
+        
+        <li >
+            <a href='/page/search/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-search" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="10" cy="10" r="7" />
+  <line x1="21" y1="21" x2="15" y2="15" />
+</svg>
+
+
+
+                
+                <span>Search</span>
+            </a>
+        </li>
+        
+
+        <div class="menu-bottom-section">
+
+            
+                <li id="dark-mode-toggle">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-toggle-left" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="8" cy="12" r="2" />
+  <rect x="2" y="6" width="20" height="12" rx="6" />
+</svg>
+
+
+
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-toggle-right" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="16" cy="12" r="2" />
+  <rect x="2" y="6" width="20" height="12" rx="6" />
+</svg>
+
+
+
+                    <span>Dark Mode</span>
+                </li>
+            
+        </div>
+    </ol>
+</aside>
+
+    <aside class="sidebar right-sidebar sticky">
+        
+            
+                
+    <section class="widget archives">
+
+
+
+        <h2 class="widget-title section-title">Table of contents</h2>
+        
+        <div class="widget--toc">
+            <nav id="TableOfContents">
+  <ul>
+    <li><a href="#1什么是字符编码">1.什么是字符编码</a></li>
+    <li><a href="#2有哪些字符编码">2.有哪些字符编码</a></li>
+    <li><a href="#3为什么有时候我们打开文件会看到乱码">3.为什么有时候我们打开文件会看到乱码？</a></li>
+    <li><a href="#4-asciiamerican-standard-code-for-information-interchange">4. ASCII（American Standard Code for Information Interchange）</a></li>
+    <li><a href="#5-unicode">5. Unicode</a></li>
+    <li><a href="#6utf-8unicode-transformation-format">6.UTF-8（Unicode Transformation Format）</a></li>
+    <li><a href="#总结">总结</a></li>
+  </ul>
+</nav>
+        </div>
+    </section>
+
+            
+        
+    </aside>
+
+
+            <main class="main full-width">
+    <article class="has-image main-article">
+    <header class="article-header">
+        <div class="article-image">
+            <a href="/posts/ascii-unicode-and-charset/">
+                <img src="/posts/ascii-unicode-and-charset/images/birds_hu5d1795c6e08ed878cbfdb3775942dd39_211231_800x0_resize_box_3.png"
+                        srcset="/posts/ascii-unicode-and-charset/images/birds_hu5d1795c6e08ed878cbfdb3775942dd39_211231_800x0_resize_box_3.png 800w, /posts/ascii-unicode-and-charset/images/birds_hu5d1795c6e08ed878cbfdb3775942dd39_211231_1600x0_resize_box_3.png 1600w"
+                        width="800" 
+                        height="169" 
+                        loading="lazy"
+                        alt="Featured image of post ASCII、Unicode和UTF-8与字符编码" />
+                
+            </a>
+        </div>
+    
+
+    <div class="article-details">
+    
+    <header class="article-category">
+        
+            <a href="/categories/%E5%86%B7%E7%9F%A5%E8%AF%86/" >
+                冷知识
+            </a>
+        
+    </header>
+    
+
+    <div class="article-title-wrapper">
+        <h2 class="article-title">
+            <a href="/posts/ascii-unicode-and-charset/">ASCII、Unicode和UTF-8与字符编码</a>
+        </h2>
+    
+        
+    </div>
+
+    
+    
+    
+    
+    <footer class="article-time">
+        
+            <div>
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-calendar-time" width="56" height="56" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <path d="M11.795 21h-6.795a2 2 0 0 1 -2 -2v-12a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v4" />
+  <circle cx="18" cy="18" r="4" />
+  <path d="M15 3v4" />
+  <path d="M7 3v4" />
+  <path d="M3 11h16" />
+  <path d="M18 16.496v1.504l1 1" />
+</svg>
+                <time class="article-time--published">Jan 02, 2024</time>
+            </div>
+        
+
+        
+            <div>
+                <svg t="1709719417939" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="3290" width="200" height="200"><path d="M851.123506 952.605578V656.828685h71.394422v367.171315H1.52988V99.952191h469.163347v71.394423H72.924303v781.258964h778.199203zM922.007968 0.50996v272.318725h-71.394422V0.50996z" fill="#666666" p-id="3291"></path><path d="M750.151394 100.972112h272.318726v71.394422H750.151394z" fill="#666666" p-id="3292"></path><path d="M430.97753 618.252239c7.366884-7.595347 14.733769-11.39251 25.783586-18.988876 7.365865-7.595347 14.732749-11.39251 22.098613-18.988877 7.366884-3.797163 14.733769-11.39251 22.099634-18.987857 7.366884-7.595347 11.049817-15.190693 14.733768-22.786039 3.681912-7.596367 7.365865-18.988876 7.365865-34.17957 0-11.39251-3.682932-22.78604-7.365865-30.382406-3.683952-11.39251-11.049817-18.987857-18.416701-22.78502-7.366884-7.596367-14.732749-11.39353-25.783585-15.191714-11.048797-3.797163-18.415681-7.595347-29.465498-7.595346-14.732749 0-25.782566 3.798183-36.832383 7.595346-11.049817 3.798183-22.099633 11.39251-29.465498 22.78604-7.366884 7.595347-14.733769 18.988876-18.416701 30.382407-3.682932 11.39251-3.682932 15.190693-3.682932 30.381386h47.882199v-11.39251c0-7.596367 3.682932-11.39353 7.365864-18.988876 3.683952-3.798183 7.366884-11.39353 11.049817-15.191713 3.683952-3.797163 11.049817-3.797163 18.416701-3.797164 11.049817 0 18.415681 3.797163 25.783586 11.39251 7.365865 7.596367 11.048797 15.191713 11.048797 26.584223 0 7.595347 0 15.190693-3.682932 18.988877-3.683952 11.39251-11.049817 15.190693-14.733769 18.988876l-14.732749 15.190693c-7.365865 3.797163-14.732749 7.595347-18.415682 11.39251-11.049817 7.595347-22.099633 11.39353-29.465498 18.988877-11.050837 7.595347-18.416701 15.190693-25.783585 26.584223-7.366884 7.595347-11.049817 18.988876-14.732749 30.381386-3.683952 11.39251-7.366884 22.78604-7.366885 37.977753h176.796048v-45.573099H416.244781c3.682932-11.39251 7.366884-18.988876 14.732749-22.78604zM305.812908 690.972558V436.525896h-47.883219c0 7.595347-3.681912 18.988876-7.365864 26.584224l-14.733769 15.190693c-7.365865 3.797163-14.732749 7.595347-22.098614 7.595346-7.366884 0-11.049817 3.798183-18.416701 0v41.774917h62.614948v159.503299h47.882199v3.798183zM692.419825 690.972558c11.049817-3.798183 22.099633-7.595347 29.465498-15.190693 7.366884-7.595347 14.733769-15.190693 18.416701-26.584224 3.682932-11.39251 3.682932-22.78604 3.682932-37.976733 0-15.190693 0-22.78706-7.365864-34.179569-7.366884-11.39251-18.416701-15.190693-33.149451-18.988877 11.049817-3.797163 18.416701-11.39251 25.783586-18.988876 7.365865-7.595347 7.365865-18.987857 7.365865-30.381387 0-11.39251-3.682932-22.78604-7.366885-30.381386-3.682932-7.595347-11.049817-15.190693-18.415681-22.78604-7.366884-7.595347-14.733769-11.39251-25.783586-15.190693C674.004143 436.525896 666.637259 436.525896 655.587442 436.525896s-22.099633 3.798183-33.14945 7.595347c-11.049817 3.798183-18.416701 11.39251-25.783586 18.988877-7.365865 7.595347-14.731729 15.190693-18.415681 26.584223-3.682932 11.39251-7.365865 26.583203-7.365864 37.976733h47.882199c0-11.39251 3.682932-26.584223 7.365864-34.17957 7.366884-7.595347 14.733769-11.39251 29.465498-11.39251 7.367904 0 18.416701 3.797163 22.100654 7.595347 7.365865 3.797163 11.049817 15.190693 11.049816 22.78502 0 7.596367 0 11.39353-3.683952 15.191713l-11.049816 11.39251c-3.681912 3.798183-11.048797 3.798183-18.415682 3.798183h-18.416701v34.17957h22.099634c7.366884 0 11.049817 0 18.416701 3.797163 7.365865 3.798183 11.049817 7.595347 14.732749 11.39353 3.682932 3.798183 3.682932 11.39251 3.682932 22.78604 0 11.39251-3.681912 22.78604-11.049817 30.382406-7.365865 7.595347-18.415681 11.39251-29.465498 11.39251-7.366884 0-14.732749 0-18.416701-3.797163-3.682932-3.798183-11.049817-7.595347-14.732749-11.39353-3.682932-3.798183-7.366884-11.39251-7.366884-15.190693-3.681912-7.595347-3.681912-15.190693-3.681913-22.78604H563.505976c0 15.190693 0 30.381386 7.366885 41.774916 3.681912 11.39251 11.049817 18.987857 18.415681 26.583203 7.366884 7.595347 18.416701 15.190693 29.465498 18.988877 11.050837 3.798183 25.783586 3.798183 36.833402 3.798183 14.732749-3.798183 25.783586 0 36.832383-3.798183z" fill="#666666" p-id="3293"></path></svg>
+                <time class="article-time--reading">
+                    122 words
+                </time>
+
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-clock" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="12" cy="12" r="9" />
+  <polyline points="12 7 12 12 15 15" />
+</svg>
+
+
+
+                <time class="article-time--reading">
+                    1 minute read
+                </time>
+            </div>
+        
+    </footer>
+    
+
+    
+</div>
+
+</header>
+
+    <section class="article-content">
+    
+    
+    <p>在讨论这个问题之前先抛出一个问题：我们都知道计算机内部都是二进制，那么给定一些文本字符串比如英文单词Good, 我们是怎么知道要把它转化为<strong>怎样的二进制的</strong>？</p>
+<p>这个问题的答案是<strong>字符编码</strong>。</p>
+<h2 id="1什么是字符编码">1.什么是字符编码</h2>
+<p>字符编码用来将人类可读的字符比如英文字母数字以及一些符号映射成一个数值，这个数值称为码位，然后通过一定规则用二进制来表示这个数值，它本质上是人为设计的一种规则或者理解为一种映射关系。理解什么是字符编码很重要，它有两个很重要的核心功能：</p>
+<ul>
+<li>将字符根据规则映射成唯一数值并转化为对应的二进制</li>
+<li>将二进制数据根据编码规则翻译成人类可读的字符</li>
+</ul>
+<blockquote>
+<p>这也是计算机世界中的一种基本的思想方法论，类似的，音视频存储在计算机中也都有相应的音视频编码算法将其转化为二进制</p>
+</blockquote>
+<h2 id="2有哪些字符编码">2.有哪些字符编码</h2>
+<p>不同地区文化中的字符集(数量和种类差异), 他们通常有自己对应的字符编码标准，再加上一些厂商自定义的标准，以及技术迭代过程中的新需求，优化等原因导致字符编码有很多种，此处只列举一些常见的。</p>
+<ul>
+<li>ASCII: 最早的字符编码</li>
+<li>Unicode: 一个全球性的字符编码标准，为世界上<strong>几乎</strong>所有的字符提供了唯一的编号</li>
+<li>UTF-8: UTF-8是Unicode 的一种实现方式</li>
+<li>ISO-8859系列:
+<ul>
+<li>ISO-8859-1: 涵盖了西欧地区最常用的字符</li>
+<li>ISO-8859-2: 设计用于中欧地区，涵盖了一些中欧国家的字符需求</li>
+<li>ISO-8859-3: 主要设计用于支持南欧、南东欧和一些其他地区的语言</li>
+<li>&hellip;</li>
+</ul>
+</li>
+<li>GBK: 主要用于简体中文</li>
+<li>Big5: 用于繁体中文</li>
+<li>&hellip;</li>
+</ul>
+<h2 id="3为什么有时候我们打开文件会看到乱码">3.为什么有时候我们打开文件会看到乱码？</h2>
+<p>我们知道同一个字符在不同的字符编码下可能会被转化成不同的二进制，同一个二进制在不同字符编码下可能会被解释成不同的符号。当选用的这个字符编码中不包含该二进制对应的字符时我们就看到了乱码现象。因此当打开一个文本文件时，我们就必须知道它的编码方式。</p>
+<h2 id="4-asciiamerican-standard-code-for-information-interchange">4. ASCII（American Standard Code for Information Interchange）</h2>
+<p><a class="link" href="https://zh.wikipedia.org/wiki/ASCII"  target="_blank" rel="noopener"
+    >ASCII</a>是一种最早的字符编码标准，它于20世纪60年代初由美国发布，规定了英语和二进制位之间的关系。它规定了128种字符，具体有哪128种可查询对应的表格资料，比如字母A对应的二进制是0100 0001。</p>
+<p>但是很明显，区区只有128种对于其他语言的字符则不足够，比如光常用汉字就有几千个，那我们怎么处理汉字呢？</p>
+<p>聪明的同学可能想到了上面提到的GBK和Big5是用来处理简繁体中文的，那么假如一段文本中既包含中文又包含一些特殊的拉丁字母呢？此时应该用什么字符编码来存储和打开这个文本文件呢？</p>
+<p>面对多元的文化环境，如果能有一种字符编码能包含世界上所有的字符是不是会更加方便。于是，Unicode应运而生。</p>
+<h2 id="5-unicode">5. Unicode</h2>
+<p>Unicode旨在涵盖全球范围内的所有语言和字符。它规定了每一个字符所对应的数字，比如中文“嗨” 对应的二进制是101010111101000，但是unicode 却并没有规定怎么存储，假如我们直接高位补0把101010111101000存到计算机中，那读取的时候怎么解释呢？计算机怎么知道这16位二进制(2字节）是表示一个字符还是两个字符？</p>
+<p>那为什么unicode 不规定就2个字节表示一个字符呢 因为在unicode中一个字符可能需要占用1～n字节不等，为了适配所有字符，就必须规定n(n&gt;1)字节表示一个字符，那对于那些明明一个字节就可以表示的字符，却非要用n字节来表示，造成了空间的浪费。</p>
+<p><strong>重点</strong>：Unicode 只规定了字符和数字的映射关系，但却没有规定这些数字怎么存储，当我们把某个字符对应的数字理解为这个字符对应的unicode时，unicode 并没有告诉我们这个unicode 该如何存储到计算机中。</p>
+<h2 id="6utf-8unicode-transformation-format">6.UTF-8（Unicode Transformation Format）</h2>
+<p>由于Unicode 没有规定存储方式，导致unicode 有多种实现方式, 其中UTF-8是其中一种最常见的实现方式。</p>
+<p>UTF-8是一种针对Unicode设计的可变长度字符编码方案。对于常用的英文字母和符号，其编码与ASCII兼容，它使用8位二进制数（1字节）来表示。但对于那些不属于ASCII字符集的Unicode字符，UTF-8采用了不同的编码方式。</p>
+<p>其编码规则：</p>
+<p>1）对于单字节的符号，字节的第一位设为<code>0</code>，后面7位为这个符号的 Unicode 码。因此对于英语字母，UTF-8 编码和 ASCII 码是相同的。</p>
+<p>2）对于<code>n</code>字节的符号（<code>n &gt; 1</code>），第一个字节的前<code>n</code>位都设为<code>1</code>，第<code>n + 1</code>位设为<code>0</code>，后面字节的前两位一律设为<code>10</code>。剩下的没有提及的二进制位，从低位开始逐渐补全为这个符号的 Unicode 码，高位不足的补0。</p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>字符</th>
+<th>Unicode</th>
+<th>unicode 二进制</th>
+<th>UTF-8编码方式</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>A</td>
+<td>U+0041</td>
+<td>01000001</td>
+<td><strong>0</strong>1000001</td>
+<td>对于单字节的符号，字节的第一位设为0</td>
+</tr>
+<tr>
+<td>é</td>
+<td>U+00E9</td>
+<td>11101001</td>
+<td><strong>110</strong>00011 <strong>10</strong>101001</td>
+<td>n=2</td>
+</tr>
+<tr>
+<td>中</td>
+<td>U+4e2d</td>
+<td>100111000101101</td>
+<td><strong>1110</strong>0100 <strong>10</strong>111000 <strong>10</strong>101101</td>
+<td>n=3</td>
+</tr>
+<tr>
+<td>😄</td>
+<td>U+1F601</td>
+<td>11111011000000100</td>
+<td><strong>11110</strong>000 <strong>10</strong>011111 <strong>10</strong>011000 <strong>10</strong>000001</td>
+<td>n=4</td>
+</tr>
+</tbody>
+</table></div>
+<p>你没看错，unicode 也可以表示表情包符号。对于更详细的UTF-8编码规则可参阅相关文档。</p>
+<h2 id="总结">总结</h2>
+<p><img src="/posts/ascii-unicode-and-charset/images/charset.svg"
+	
+	
+	
+	loading="lazy"
+	
+		alt="charset"
+	
+	
+></p>
+<ol>
+<li>字符编码用来规定字符和数值(码位）之间，以及码位和计算机二进制之间的一一对应关系，不同的字符编码这个映射关系不同</li>
+<li>ASCII是一种最早的字符编码标准用来处理英文及常见标点等128种字符，而Unicode 包含更多的字符集，旨在为世界上几乎所有的字符提供一个唯一的数值标识，以便在不同的计算机系统和应用程序中进行一致的文本处理，因此ASCII字符集是Unicode字符集的一个子集。</li>
+<li>Unicode 并不规定码位的存储方式，它的存储和表现方式取决于具体的编码方案，其中最常见的是UTF-8, 此外还有UTF-16, UTF-32等。UTF-8是unicode 的一种具体实现。</li>
+</ol>
+</section>
+
+
+    <footer class="article-footer">
+    
+
+    </footer>
+
+
+    
+</article>
+
+    
+
+    
+
+     
+    
+        
+    
+
+    <footer class="site-footer">
+    <section class="copyright">
+        &copy; 
+        
+        2024 清露晨流, 新桐初引
+    </section>
+    
+
+
+
+
+
+
+
+
+
+
+</footer>
+
+
+    
+<div class="pswp" tabindex="-1" role="dialog" aria-hidden="true">
+
+    
+    <div class="pswp__bg"></div>
+
+    
+    <div class="pswp__scroll-wrap">
+
+        
+        <div class="pswp__container">
+            <div class="pswp__item"></div>
+            <div class="pswp__item"></div>
+            <div class="pswp__item"></div>
+        </div>
+
+        
+        <div class="pswp__ui pswp__ui--hidden">
+
+            <div class="pswp__top-bar">
+
+                
+
+                <div class="pswp__counter"></div>
+
+                <button class="pswp__button pswp__button--close" title="Close (Esc)"></button>
+
+                <button class="pswp__button pswp__button--share" title="Share"></button>
+
+                <button class="pswp__button pswp__button--fs" title="Toggle fullscreen"></button>
+
+                <button class="pswp__button pswp__button--zoom" title="Zoom in/out"></button>
+
+                
+                
+                <div class="pswp__preloader">
+                    <div class="pswp__preloader__icn">
+                        <div class="pswp__preloader__cut">
+                            <div class="pswp__preloader__donut"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="pswp__share-modal pswp__share-modal--hidden pswp__single-tap">
+                <div class="pswp__share-tooltip"></div>
+            </div>
+
+            <button class="pswp__button pswp__button--arrow--left" title="Previous (arrow left)">
+            </button>
+
+            <button class="pswp__button pswp__button--arrow--right" title="Next (arrow right)">
+            </button>
+
+            <div class="pswp__caption">
+                <div class="pswp__caption__center"></div>
+            </div>
+
+        </div>
+
+    </div>
+
+</div><script 
+                src="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe.min.js"integrity="sha256-ePwmChbbvXbsO02lbM3HoHbSHTHFAeChekF1xKJdleo="crossorigin="anonymous"
+                defer
+                >
+            </script><script 
+                src="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe-ui-default.min.js"integrity="sha256-UKkzOn/w1mBxRmLLGrSeyB4e1xbrp4xylgAWb3M42pU="crossorigin="anonymous"
+                defer
+                >
+            </script><link 
+                rel="stylesheet" 
+                href="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/default-skin/default-skin.min.css"crossorigin="anonymous"
+            ><link 
+                rel="stylesheet" 
+                href="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe.min.css"crossorigin="anonymous"
+            >
+
+            </main>
+        </div>
+        <script 
+                src="https://cdn.jsdelivr.net/npm/node-vibrant@3.1.6/dist/vibrant.min.js"integrity="sha256-awcR2jno4kI5X0zL8ex0vi2z&#43;KMkF24hUW8WePSA9HM="crossorigin="anonymous"
+                
+                >
+            </script><script type="text/javascript" src="/ts/main.js" defer></script>
+<script>
+    (function () {
+        const customFont = document.createElement('link');
+        customFont.href = "https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&display=swap";
+
+        customFont.type = "text/css";
+        customFont.rel = "stylesheet";
+
+        document.head.appendChild(customFont);
+    }());
+</script>
+
+    </body>
+</html>
