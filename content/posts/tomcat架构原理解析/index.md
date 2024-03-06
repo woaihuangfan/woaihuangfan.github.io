@@ -61,13 +61,13 @@ And include the appropriate HTTP headers in the response (e.g., Content-Type)
 
 HTTP请求是客户端在向服务端请求某个资源时，向服务端发送的符合HTTP协议规范的数据，下面给出一个完整的GET 请求示例
 
-```http
+```text
 GET /sample HTTP/1.1 
 Host: www.example.com
 Accept: application/json
 ```
 
-## 手写最简版**Tomcat**
+## 手写最简版Tomcat
 
 ### 如何发起HTTP请求？
 
@@ -82,8 +82,8 @@ Accept: application/json
 那我们如何建立TCP 链接呢，其实这部分工作是由应用层的底层库去帮我们来做的。以Java 为例，这个类库就叫做Socket。它也是在网络通信中的一个种抽象概念，从Java的角度来理解建立一个TCP 链接其实就是生成了一个Socket 对象，下面是一个建立TCP链接示例：
 
 ```kotlin
- val socket = Socket("google.com", 443)
- println(socket.isConnected)
+val socket = Socket("google.com", 443)
+println(socket.isConnected)
 ```
 
 当上述代码输出`true` 就表明已经建立了链接，这底层由JDK 调用操作系统API 来实现。
@@ -117,7 +117,7 @@ socket.getOutputStream().write(71)
 
 ```kotlin
 val serverSocket = ServerSocket(8080)
- println("Server started successfully, listening on port: 8080")
+println("Server started successfully, listening on port: 8080")
 ```
 
 我们用到了`ServerSocket`这个类，它提供了一种机制，使得Java应用程序能够监听客户端的连接请求，并在连接建立后进行通信。而这底层也是有JDK调用操作系统API 实现。
@@ -146,7 +146,7 @@ println(bytes.decodeToString())
 
 在10行运行完后我们可以在控制台看到类似下面这样的输出：
 
-```http
+```text
 GET /sample HTTP/1.1 
 Host: www.example.com
 Accept: application/json

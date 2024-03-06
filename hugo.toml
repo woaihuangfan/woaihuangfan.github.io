@@ -2,3 +2,9 @@ baseURL = 'https://woaihuangfan.github.io/'
 languageCode = 'en-us'
 title = '清露晨流, 新桐初引'
 theme = 'stack'
+pygmentsCodeFences = true
+pygmentsUseClasses = true
+# Use the new Chroma Go highlighter in Hugo.
+pygmentsUseClassic = false
+#pygmentsOptions = "linenos=table"
+# See https://help.farbox.com/pygments.html
