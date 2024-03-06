@@ -59,7 +59,7 @@ And include the appropriate HTTP headers in the response (e.g., Content-Type)
 
 ## 理解HTTP 请求的本质
 
-HTTP请求是客户端在向服务端请求某个资源时，向服务端发送的是符合HTTP协议规范的数据，下面给出一个完整的GET 请求示例
+HTTP请求是客户端在向服务端请求某个资源时，向服务端发送的符合HTTP协议规范的数据，下面给出一个完整的GET 请求示例
 
 ```http
 GET /sample HTTP/1.1 
@@ -179,7 +179,7 @@ socket.getOutputStream().write(
 
 #### 最简版**Tomcat**
 
-将以上步骤再串起来我们就可以自己去实现tomcat， 注意，真正的tomcat实现和功能要比这个复杂的多，但理解这部分内容对于我们理解什么是Tomcat很重要，因为**tomcat在坐着类似的事情**。
+将以上步骤再串起来我们就可以自己去实现tomcat， 注意，真正的tomcat实现和功能要比这个复杂的多，但理解这部分内容对于我们理解什么是Tomcat很重要，因为**tomcat在做着类似的事情**。
 
 **测试先行**
 
@@ -1392,7 +1392,7 @@ protected Processor createProcessor() {
 
 以HTTP/1.1 为例， 上述代码会创建HTTP11Processor 来处理这个socket
 
-![image-20240223104628734](images/image-20240223104628734.png)
+![Http11Processor](images/Http11Processor.png)
 
 AbstractProcessorLight的process 方法。
 
@@ -2326,7 +2326,7 @@ protected Class<?> findClassInternal(String name) {
 * **tomcat是如何对响应进行压缩的(例如gzip)？**
 * **...**
 
-
+> 这几个问题暂时不作为这次的故事主线，对响应压缩和分块传输感兴趣的同学可以参考我的另一篇：[tomcat http 压缩与分块传输原理](https://woaihuangfan.github.io/posts/tomcat-http-压缩与分块传输/)
 
 但是在此之前，站在开发者的角度考虑到我们基于springboot开发的时候，我们还有一点没有搞清楚，tomcat 是如何与Springboot联系在一起的呢？
 
