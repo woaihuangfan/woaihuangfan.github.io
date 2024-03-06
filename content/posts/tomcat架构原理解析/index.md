@@ -844,7 +844,7 @@ public abstract class ContainerBase extends LifecycleMBeanBase implements Contai
 
 ### Tomcat 的启动过程
 
-![tomcat 启动过程](images/tomcat-startup.png)
+![tomcat 启动过程](images/tomcat 启动过程.png)
 
 
 
